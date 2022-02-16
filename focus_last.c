@@ -28,8 +28,8 @@ static char *lock_path;
 static char *state_path;
 
 typedef struct {
-	uint32_t desktop;
-	xcb_window_t window;
+    uint32_t desktop;
+    xcb_window_t window;
 } seen_window_t;
 
 seen_window_t seen_windows[2] = {0};
@@ -76,18 +76,18 @@ xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
 }
 
 void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop) {
-	uint32_t data[5] = { desktop, 0, XCB_CURRENT_TIME, 0, 0 }; // new_index, timestamp, padding
-	xcb_ewmh_send_client_message(ewmh->connection,
+    uint32_t data[5] = { desktop, 0, XCB_CURRENT_TIME, 0, 0 }; // new_index, timestamp, padding
+    xcb_ewmh_send_client_message(ewmh->connection,
                                  ewmh->screens[SCREEN_NUM]->root,
                                  ewmh->screens[SCREEN_NUM]->root,
                                  ewmh->_NET_CURRENT_DESKTOP,
                                  sizeof(data), data);
-	xcb_flush(ewmh->connection);
+    xcb_flush(ewmh->connection);
 }
 
 void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
-	uint32_t data[5] = { 2, XCB_CURRENT_TIME, 0, 0, 0 }; // source indication (1=app, 2=pager), timestamp, currently active window, padding
-	xcb_ewmh_send_client_message(ewmh->connection,
+    uint32_t data[5] = { 2, XCB_CURRENT_TIME, 0, 0, 0 }; // source indication (1=app, 2=pager), timestamp, currently active window, padding
+    xcb_ewmh_send_client_message(ewmh->connection,
                                  window,
                                  ewmh->screens[SCREEN_NUM]->root,
                                  ewmh->_NET_ACTIVE_WINDOW,
@@ -126,25 +126,25 @@ void on_active_window_changed(xcb_ewmh_connection_t *ewmh) {
 }
 
 void receive_events(xcb_ewmh_connection_t *ewmh) {
-	const uint32_t mask[] = { XCB_EVENT_MASK_PROPERTY_CHANGE };
-	xcb_change_window_attributes(ewmh->connection,
+    const uint32_t mask[] = { XCB_EVENT_MASK_PROPERTY_CHANGE };
+    xcb_change_window_attributes(ewmh->connection,
                                  ewmh->screens[SCREEN_NUM]->root,
                                  XCB_CW_EVENT_MASK,
                                  &mask);
-	xcb_flush(ewmh->connection);
+    xcb_flush(ewmh->connection);
 
-	xcb_generic_event_t *event;
-	while ((event = xcb_wait_for_event(ewmh->connection)))
-	{
-		if (event->response_type == XCB_PROPERTY_NOTIFY)
-		{
-			xcb_property_notify_event_t *e = (void *) event;
+    xcb_generic_event_t *event;
+    while ((event = xcb_wait_for_event(ewmh->connection)))
+    {
+        if (event->response_type == XCB_PROPERTY_NOTIFY)
+        {
+            xcb_property_notify_event_t *e = (void *) event;
             if (e->atom == ewmh->_NET_ACTIVE_WINDOW) {
                 on_active_window_changed(ewmh);
             }
-		}
-		free(event);
-	}
+        }
+        free(event);
+    }
 }
 
 
@@ -154,28 +154,28 @@ void print_info(xcb_ewmh_connection_t *ewmh) {
 }
 
 void set_paths() {
-	char *dir = getenv("XDG_RUNTIME_DIR");
-	if (dir == NULL || dir[0] != '/')
-		dir = "/tmp";
-	
+    char *dir = getenv("XDG_RUNTIME_DIR");
+    if (dir == NULL || dir[0] != '/')
+        dir = "/tmp";
+    
     size_t dirlen = strlen(dir);
-	lock_path = malloc(dirlen + sizeof("/" LOCK_FILE));
-	if (lock_path == NULL) {
-		fputs("Couldn't allocate memory.", stderr);
-		exit(1);
-	}
-	memcpy(lock_path, dir, dirlen);
-	memcpy(lock_path + dirlen, "/" LOCK_FILE,
-	    sizeof("/" LOCK_FILE));  /* copies '\0' */
+    lock_path = malloc(dirlen + sizeof("/" LOCK_FILE));
+    if (lock_path == NULL) {
+        fputs("Couldn't allocate memory.", stderr);
+        exit(1);
+    }
+    memcpy(lock_path, dir, dirlen);
+    memcpy(lock_path + dirlen, "/" LOCK_FILE,
+        sizeof("/" LOCK_FILE));  /* copies '\0' */
 
     state_path = malloc(dirlen + sizeof("/" STATE_FILE));
-	if (state_path == NULL) {
-		fputs("Couldn't allocate memory.", stderr);
-		exit(1);
-	}
-	memcpy(state_path, dir, dirlen);
-	memcpy(state_path + dirlen, "/" STATE_FILE,
-	    sizeof("/" STATE_FILE));  /* copies '\0' */
+    if (state_path == NULL) {
+        fputs("Couldn't allocate memory.", stderr);
+        exit(1);
+    }
+    memcpy(state_path, dir, dirlen);
+    memcpy(state_path + dirlen, "/" STATE_FILE,
+        sizeof("/" STATE_FILE));  /* copies '\0' */
 }
 
 void free_paths() {
@@ -184,29 +184,29 @@ void free_paths() {
 }
 
 void unlink_lock_file() {
-	unlink(lock_path);
+    unlink(lock_path);
     free_paths();
 }
 
 int check_or_acquire_instance_lock() {
-	int is_running = 0;
+    int is_running = 0;
  
-	int fd = open(lock_path, O_RDWR | O_CREAT, 0600);
-	if (fd < 0) {
-		fprintf(stderr, "Couldn't create lock file: %s\n", lock_path);
-		exit(1);
-	}
+    int fd = open(lock_path, O_RDWR | O_CREAT, 0600);
+    if (fd < 0) {
+        fprintf(stderr, "Couldn't create lock file: %s\n", lock_path);
+        exit(1);
+    }
      
-	struct flock fl = {
+    struct flock fl = {
         .l_start = 0,
         .l_len = 0,
         .l_type = F_WRLCK,
         .l_whence = SEEK_SET
     };
-	if (fcntl(fd, F_SETLK, &fl) < 0)
-		is_running = 1;
+    if (fcntl(fd, F_SETLK, &fl) < 0)
+        is_running = 1;
 
-	return is_running;
+    return is_running;
 }
 
 // TODO: make real path and check for handles
@@ -253,14 +253,14 @@ void main() {
     xcb_ewmh_connection_t ewmh = get_ewmh_connection();
 
     /* print_info(&ewmh); */
-	if (is_running) {
+    if (is_running) {
         activate_last_seen_window(&ewmh);
         usleep(150); // we need to let the wm have time to process the events
         /* print_info(&ewmh); */
         cleanup_connection(&ewmh);
         free_paths();
-		exit(0);
-	}
+        exit(0);
+    }
 
     atexit(unlink_lock_file);
 
