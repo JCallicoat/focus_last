@@ -1,11 +1,11 @@
 /*
- * Simple program using xcb to listen for _NET_ACTIVE_WINDOW changes and remembers the last two focused windows.
+ * Simple program using xcb to listen for _NET_ACTIVE_WINDOW changes and
+ * remembers the last two focused windows.
  *
- * When the program is already running and it called again it will switch the focus to the previous window (switching desktops if necessary).
+ * When the program is already running and it's called again it will switch the
+ * focus to the previous window (switching desktops if necessary).
  *
  * Copyright 2022 Jordan Callicoat <jordan.callicoat@gmail.com>
- *
- * gcc focus_last.c -o focus_last -lxcb -lxcb-ewmh
  *
  */
 
@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
 #include <xcb/xproto.h>
@@ -35,7 +34,6 @@ typedef struct {
 
 seen_window_t seen_windows[2] = {0};
 
-
 xcb_ewmh_connection_t get_ewmh_connection() {
     xcb_connection_t *connection = xcb_connect(NULL, NULL);
     int err = xcb_connection_has_error(connection);
@@ -45,13 +43,12 @@ xcb_ewmh_connection_t get_ewmh_connection() {
     }
 
     xcb_ewmh_connection_t ewmh;
-    if (!xcb_ewmh_init_atoms_replies(&ewmh,
-                                     xcb_ewmh_init_atoms(connection, &ewmh),
-                                     NULL)) {
+    if (!xcb_ewmh_init_atoms_replies(
+            &ewmh, xcb_ewmh_init_atoms(connection, &ewmh), NULL)) {
         fputs("EWMH init failed\n", stderr);
         exit(1);
     }
-    
+
     return ewmh;
 }
 
@@ -62,22 +59,22 @@ void cleanup_connection(xcb_ewmh_connection_t *ewmh) {
 
 uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
     uint32_t current_desktop;
-    xcb_ewmh_get_current_desktop_reply(ewmh,
-                                       xcb_ewmh_get_current_desktop(ewmh, 0),
-                                       &current_desktop, 0);
+    xcb_ewmh_get_current_desktop_reply(
+        ewmh, xcb_ewmh_get_current_desktop(ewmh, 0), &current_desktop, 0);
     return current_desktop;
 }
 
 xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
     xcb_window_t active_window;
-    xcb_ewmh_get_active_window_reply(ewmh,
-                                     xcb_ewmh_get_active_window(ewmh, 0),
+    xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, 0),
                                      &active_window, 0);
     return active_window;
 }
 
-void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_flush) {
-    uint32_t data[5] = { desktop, 0, XCB_CURRENT_TIME, 0, 0 }; // new_index, timestamp, padding
+void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop,
+                         bool do_flush) {
+    // new_index, timestamp, padding
+    uint32_t data[5] = {desktop, 0, XCB_CURRENT_TIME, 0, 0};
     xcb_ewmh_send_client_message(ewmh->connection,
                                  ewmh->screens[SCREEN_NUM]->root,
                                  ewmh->screens[SCREEN_NUM]->root,
@@ -87,19 +84,20 @@ void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_
         xcb_flush(ewmh->connection);
 }
 
-void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window, bool do_flush) {
-    uint32_t data[5] = { 2, XCB_CURRENT_TIME, 0, 0, 0 }; // source indication (1=app, 2=pager), timestamp, currently active window, padding
-    xcb_ewmh_send_client_message(ewmh->connection,
-                                 window,
+void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window,
+                       bool do_flush) {
+    // source (1=app, 2=pager), timestamp, currently active window, padding
+    uint32_t data[5] = {2, XCB_CURRENT_TIME, 0, 0, 0};
+    xcb_ewmh_send_client_message(ewmh->connection, window,
                                  ewmh->screens[SCREEN_NUM]->root,
-                                 ewmh->_NET_ACTIVE_WINDOW,
-                                 sizeof(data), data);
+                                 ewmh->_NET_ACTIVE_WINDOW, sizeof(data), data);
     if (do_flush)
         xcb_flush(ewmh->connection);
 }
 
 void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
-    set_current_desktop(ewmh, seen_windows[0].desktop, false); // don't flush until we send both events
+    // don't flush until we send both events
+    set_current_desktop(ewmh, seen_windows[0].desktop, false);  
     set_active_window(ewmh, seen_windows[0].window, true);
 }
 
@@ -118,28 +116,26 @@ void on_active_window_changed(xcb_ewmh_connection_t *ewmh) {
             }
             seen_windows[1].desktop = desktop;
             seen_windows[1].window = window;
-
         }
-        printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop, seen_windows[0].window);
-        printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop, seen_windows[1].window);
+        printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop,
+               seen_windows[0].window);
+        printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop,
+               seen_windows[1].window);
         write_state_file();
     }
 }
 
 void receive_events(xcb_ewmh_connection_t *ewmh) {
-    const uint32_t mask[] = { XCB_EVENT_MASK_PROPERTY_CHANGE };
+    const uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE};
     xcb_change_window_attributes(ewmh->connection,
                                  ewmh->screens[SCREEN_NUM]->root,
-                                 XCB_CW_EVENT_MASK,
-                                 &mask);
+                                 XCB_CW_EVENT_MASK, &mask);
     xcb_flush(ewmh->connection);
 
     xcb_generic_event_t *event;
-    while ((event = xcb_wait_for_event(ewmh->connection)))
-    {
-        if (event->response_type == XCB_PROPERTY_NOTIFY)
-        {
-            xcb_property_notify_event_t *e = (void *) event;
+    while ((event = xcb_wait_for_event(ewmh->connection))) {
+        if (event->response_type == XCB_PROPERTY_NOTIFY) {
+            xcb_property_notify_event_t *e = (void *)event;
             if (e->atom == ewmh->_NET_ACTIVE_WINDOW) {
                 on_active_window_changed(ewmh);
             }
@@ -147,7 +143,6 @@ void receive_events(xcb_ewmh_connection_t *ewmh) {
         free(event);
     }
 }
-
 
 void print_info(xcb_ewmh_connection_t *ewmh) {
     printf("Current Desktop is: %d\n", get_current_desktop(ewmh));
@@ -166,8 +161,7 @@ void set_paths() {
         exit(1);
     }
     memcpy(lock_path, dir, dirlen);
-    memcpy(lock_path + dirlen, "/" LOCK_FILE,
-        sizeof("/" LOCK_FILE));
+    memcpy(lock_path + dirlen, "/" LOCK_FILE, sizeof("/" LOCK_FILE));
 
     state_path = malloc(dirlen + sizeof("/" STATE_FILE));
     if (state_path == NULL) {
@@ -175,8 +169,7 @@ void set_paths() {
         exit(1);
     }
     memcpy(state_path, dir, dirlen);
-    memcpy(state_path + dirlen, "/" STATE_FILE,
-        sizeof("/" STATE_FILE));
+    memcpy(state_path + dirlen, "/" STATE_FILE, sizeof("/" STATE_FILE));
 }
 
 void free_paths() {
@@ -191,13 +184,13 @@ void unlink_lock_file() {
 
 int check_or_acquire_instance_lock() {
     int is_running = 0;
- 
+
     int fd = open(lock_path, O_RDWR | O_CREAT, 0600);
     if (fd < 0) {
         fprintf(stderr, "Couldn't create lock file: %s\n", lock_path);
         exit(1);
     }
-     
+
     struct flock fl = {
         .l_start = 0,
         .l_len = 0,
@@ -214,29 +207,36 @@ void read_state_file() {
     FILE *fp = fopen(state_path, "rb");
 
     if (fp == NULL) {
-        fprintf(stderr, "Could not open state file for reading %s\n", state_path);
-        return; // don't care if we don't have a state file yet
+        fprintf(stderr, "Could not open state file for reading %s\n",
+                state_path);
+        return;  // don't care if we don't have a state file yet
     }
 
     seen_window_t seen_window = {0};
-    for (int i = 0 ; i < 2 ; i++) {
+    for (int i = 0; i < 2; i++) {
         if (fread(&seen_window, sizeof(seen_window_t), 1, fp) != 1) {
             fprintf(stderr, "Parsing state file %s failed\n", state_path);
             break;
-       }
-       seen_windows[i] = seen_window;
+        }
+        seen_windows[i] = seen_window;
     }
     fclose(fp);
 }
 
 void write_state_file() {
     FILE *fp = fopen(state_path, "wb");
-    
-    if (fp == NULL) 
-        fprintf(stderr, "Could open state file for writing %s - this is necessary for this program to work.\n", state_path);
-    
-    // we don't care if writing fails, we only read complete records of the right size above
-    for (int i = 0 ; i < 2 ; i++)
+
+    if (fp == NULL) {
+        fprintf(stderr,
+                "Could open state file for writing %s - this is necessary for "
+                "this program to work.\n",
+                state_path);
+        return;
+    }
+
+    // we don't care if writing fails, we only read complete records of the
+    // right size above
+    for (int i = 0; i < 2; i++)
         fwrite(&seen_windows[i], sizeof(seen_window_t), 1, fp);
 
     fflush(fp);
@@ -248,13 +248,14 @@ int main() {
     read_state_file();
 
     int is_running = check_or_acquire_instance_lock();
-    
+
     xcb_ewmh_connection_t ewmh = get_ewmh_connection();
 
     /* print_info(&ewmh); */
     if (is_running) {
         activate_last_seen_window(&ewmh);
-        usleep(150); // we need to let the wm have time to process the events before closing our connection
+        usleep(150);  // we need to let the wm have time to process the events
+                      // before closing our connection
         /* print_info(&ewmh); */
         cleanup_connection(&ewmh);
         free_paths();
