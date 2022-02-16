@@ -20,6 +20,7 @@
 #include <xcb/xproto.h>
 
 #define SCREEN_NUM 0
+#define SLEEP_TIME 250
 
 #define LOCK_FILE "focus_last.lock"
 #define STATE_FILE "focus_last.state"
@@ -251,8 +252,9 @@ int main() {
     /* print_info(&ewmh); */
     if (is_running) {
         activate_last_seen_window(&ewmh);
-        usleep(150);  // we need to let the wm have time to process the events
-                      // before closing our connection
+        // we need to let the wm have time to process the events
+        // before closing our connection
+        usleep(SLEEP_TIME);
         /* print_info(&ewmh); */
         cleanup_connection(&ewmh);
         free_paths();
