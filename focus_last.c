@@ -59,8 +59,8 @@ void cleanup_connection(xcb_ewmh_connection_t *ewmh) {
 
 uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
     uint32_t current_desktop;
-    xcb_ewmh_get_current_desktop_reply(
-        ewmh, xcb_ewmh_get_current_desktop(ewmh, 0), &current_desktop, 0);
+    xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, 0),
+                                       &current_desktop, 0);
     return current_desktop;
 }
 
@@ -71,8 +71,7 @@ xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
     return active_window;
 }
 
-void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop,
-                         bool do_flush) {
+void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_flush) {
     // new_index, timestamp, padding
     uint32_t data[5] = {desktop, 0, XCB_CURRENT_TIME, 0, 0};
     xcb_ewmh_send_client_message(ewmh->connection,
@@ -84,8 +83,7 @@ void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop,
         xcb_flush(ewmh->connection);
 }
 
-void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window,
-                       bool do_flush) {
+void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window, bool do_flush) {
     // source (1=app, 2=pager), timestamp, currently active window, padding
     uint32_t data[5] = {2, XCB_CURRENT_TIME, 0, 0, 0};
     xcb_ewmh_send_client_message(ewmh->connection, window,
@@ -207,8 +205,7 @@ void read_state_file() {
     FILE *fp = fopen(state_path, "rb");
 
     if (fp == NULL) {
-        fprintf(stderr, "Could not open state file for reading %s\n",
-                state_path);
+        fprintf(stderr, "Could not open state file for reading %s\n", state_path);
         return;  // don't care if we don't have a state file yet
     }
 
@@ -228,8 +225,8 @@ void write_state_file() {
 
     if (fp == NULL) {
         fprintf(stderr,
-                "Could open state file for writing %s - this is necessary for "
-                "this program to work.\n",
+                "Could open state file for writing %s "
+                "- the state file is necessary for this program to work.\n",
                 state_path);
         return;
     }
