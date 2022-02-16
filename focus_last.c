@@ -44,8 +44,7 @@ xcb_ewmh_connection_t get_ewmh_connection() {
     }
 
     xcb_ewmh_connection_t ewmh;
-    if (!xcb_ewmh_init_atoms_replies(
-            &ewmh, xcb_ewmh_init_atoms(connection, &ewmh), NULL)) {
+    if (!xcb_ewmh_init_atoms_replies(&ewmh, xcb_ewmh_init_atoms(connection, &ewmh), NULL)) {
         fputs("EWMH init failed\n", stderr);
         exit(1);
     }
@@ -87,16 +86,18 @@ void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_
 void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window, bool do_flush) {
     // source (1=app, 2=pager), timestamp, currently active window, padding
     uint32_t data[5] = {2, XCB_CURRENT_TIME, 0, 0, 0};
-    xcb_ewmh_send_client_message(ewmh->connection, window,
+    xcb_ewmh_send_client_message(ewmh->connection,
+                                 window,
                                  ewmh->screens[SCREEN_NUM]->root,
-                                 ewmh->_NET_ACTIVE_WINDOW, sizeof(data), data);
+                                 ewmh->_NET_ACTIVE_WINDOW,
+                                 sizeof(data), data);
     if (do_flush)
         xcb_flush(ewmh->connection);
 }
 
 void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
     // don't flush until we send both events
-    set_current_desktop(ewmh, seen_windows[0].desktop, false);  
+    set_current_desktop(ewmh, seen_windows[0].desktop, false);
     set_active_window(ewmh, seen_windows[0].window, true);
 }
 
@@ -116,18 +117,15 @@ void on_active_window_changed(xcb_ewmh_connection_t *ewmh) {
             seen_windows[1].desktop = desktop;
             seen_windows[1].window = window;
         }
-        printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop,
-               seen_windows[0].window);
-        printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop,
-               seen_windows[1].window);
+        printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop, seen_windows[0].window);
+        printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop, seen_windows[1].window);
         write_state_file();
     }
 }
 
 void receive_events(xcb_ewmh_connection_t *ewmh) {
     const uint32_t mask[] = {XCB_EVENT_MASK_PROPERTY_CHANGE};
-    xcb_change_window_attributes(ewmh->connection,
-                                 ewmh->screens[SCREEN_NUM]->root,
+    xcb_change_window_attributes(ewmh->connection, ewmh->screens[SCREEN_NUM]->root,
                                  XCB_CW_EVENT_MASK, &mask);
     xcb_flush(ewmh->connection);
 
@@ -152,7 +150,7 @@ void set_paths() {
     char *dir = getenv("XDG_RUNTIME_DIR");
     if (dir == NULL || dir[0] != '/')
         dir = "/tmp";
-    
+
     size_t dirlen = strlen(dir);
     lock_path = malloc(dirlen + sizeof("/" LOCK_FILE));
     if (lock_path == NULL) {
@@ -190,12 +188,7 @@ int check_or_acquire_instance_lock() {
         exit(1);
     }
 
-    struct flock fl = {
-        .l_start = 0,
-        .l_len = 0,
-        .l_type = F_WRLCK,
-        .l_whence = SEEK_SET
-    };
+    struct flock fl = {.l_start = 0, .l_len = 0, .l_type = F_WRLCK, .l_whence = SEEK_SET};
     if (fcntl(fd, F_SETLK, &fl) < 0)
         is_running = 1;
 
