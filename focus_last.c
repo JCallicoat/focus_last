@@ -96,6 +96,8 @@ void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
 }
 
 void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
+    /* printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop, seen_windows[0].window); */
+    /* printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop, seen_windows[1].window); */
     set_current_desktop(ewmh, seen_windows[0].desktop);
     set_active_window(ewmh, seen_windows[0].window);
 }
@@ -176,10 +178,14 @@ void set_paths() {
 	    sizeof("/" STATE_FILE));  /* copies '\0' */
 }
 
+void free_paths() {
+    free(lock_path);
+    free(state_path);
+}
+
 void unlink_lock_file() {
 	unlink(lock_path);
-    free(lock_path);
-	free(state_path);
+    free_paths();
 }
 
 int check_or_acquire_instance_lock() {
@@ -209,22 +215,17 @@ void read_state_file() {
     FILE *fp = fopen(state_path, "rb");
 
     if (fp == NULL) {
-        fprintf(stderr, "Can't read state file");
+        fprintf(stderr, "Could not open state file for reading %s\n", state_path);
         return; // don't care if we don't have a state file yet
     }
 
-    uint32_t desktop;
-    xcb_window_t window;
-    size_t r1;
-    size_t r2;
+    seen_window_t seen_window = {0};
     for (int i = 0 ; i < 2 ; i++) {
-        if ((r1 = fread(&desktop, sizeof(uint32_t), 1, fp)) == sizeof(uint32_t) &&
-            (r2 = fread(&window, sizeof(xcb_window_t), 1, fp)) == sizeof(xcb_window_t)) {
-            seen_windows[i].desktop = desktop;
-            seen_windows[i].window = window;
-        }
-        printf("r1 = %zu\n", r1);
-        printf("r2 = %zu\n", r2);
+        if (fread(&seen_window, sizeof(seen_window_t), 1, fp) != 1) {
+            fprintf(stderr, "Parsing state file %s failed\n", state_path);
+            break;
+       }
+       seen_windows[i] = seen_window;
     }
     fclose(fp);
 }
@@ -236,10 +237,9 @@ void write_state_file() {
         fprintf(stderr, "Could open state file for writing %s - this is necessary for this program to work.\n", state_path);
     
     // we don't care about if writing fails, we only read valid records above
-    for (int i = 0 ; i < 2 ; i++) {
-        fwrite(&seen_windows[i].desktop, sizeof(uint32_t), 1, fp);
-        fwrite(&seen_windows[i].window, sizeof(xcb_window_t), 1, fp);
-    }
+    for (int i = 0 ; i < 2 ; i++)
+        fwrite(&seen_windows[i], sizeof(seen_window_t), 1, fp);
+
     fflush(fp);
     fclose(fp);
 }
@@ -256,12 +256,13 @@ void main() {
 	if (is_running) {
         activate_last_seen_window(&ewmh);
         usleep(150); // we need to let the wm have time to process the events
-        print_info(&ewmh);
+        /* print_info(&ewmh); */
         cleanup_connection(&ewmh);
+        free_paths();
 		exit(0);
 	}
 
-	/* atexit(unlink_lock_file); */
+    atexit(unlink_lock_file);
 
     receive_events(&ewmh);
 
