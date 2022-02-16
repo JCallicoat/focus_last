@@ -209,8 +209,6 @@ int check_or_acquire_instance_lock() {
     return is_running;
 }
 
-// TODO: make real path and check for handles
-//       handle malformed file
 void read_state_file() {
     FILE *fp = fopen(state_path, "rb");
 
