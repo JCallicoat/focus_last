@@ -78,39 +78,35 @@ bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
 }
 
 uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
-    uint32_t current_desktop;
+    uint32_t current_desktop = 0;
     xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, SCREEN_NUM),
                                        &current_desktop, NULL);
     return current_desktop;
 }
 
 xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
-    xcb_window_t active_window;
+    xcb_window_t active_window = 0;
     xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, SCREEN_NUM),
                                      &active_window, NULL);
     return active_window;
 }
 
 void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_flush) {
-    // new_index, timestamp, padding
-    uint32_t data[5] = {desktop, 0, XCB_CURRENT_TIME, 0, 0};
-    xcb_ewmh_send_client_message(ewmh->connection,
-                                 ewmh->screens[SCREEN_NUM]->root,
-                                 ewmh->screens[SCREEN_NUM]->root,
-                                 ewmh->_NET_CURRENT_DESKTOP,
-                                 sizeof(data), data);
+    xcb_ewmh_request_change_current_desktop(ewmh,
+                                            SCREEN_NUM,
+                                            desktop,
+                                            XCB_CURRENT_TIME);
     if (do_flush)
         xcb_flush(ewmh->connection);
 }
 
 void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window, bool do_flush) {
-    // source (1=app, 2=pager), timestamp, currently active window, padding
-    uint32_t data[5] = {2, XCB_CURRENT_TIME, 0, 0, 0};
-    xcb_ewmh_send_client_message(ewmh->connection,
-                                 window,
-                                 ewmh->screens[SCREEN_NUM]->root,
-                                 ewmh->_NET_ACTIVE_WINDOW,
-                                 sizeof(data), data);
+    xcb_ewmh_request_change_active_window(ewmh,
+										  SCREEN_NUM,
+                                          window,
+                                          XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER, // pager
+                                          XCB_CURRENT_TIME,
+                                          0); // don't set current window
     if (do_flush)
         xcb_flush(ewmh->connection);
 }
