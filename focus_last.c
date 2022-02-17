@@ -53,8 +53,8 @@ void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop) {
 
 void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
     xcb_ewmh_request_change_active_window(ewmh, SCREEN_NUM, window,
-                                          XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER, // pager
-                                          XCB_CURRENT_TIME, 0); // don't set current window
+                                          XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER,  // pager
+                                          XCB_CURRENT_TIME, 0);  // don't set current window
 }
 
 uint32_t get_desktop_for_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
@@ -74,7 +74,7 @@ void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
 
 bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
     if (!FILTER_NORMAL_WINDOWS)
-        return true; // just pretend all windows are normal
+        return true;  // just pretend all windows are normal
 
     bool is_normal = false;
     xcb_ewmh_get_atoms_reply_t window_type;
