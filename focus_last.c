@@ -21,6 +21,7 @@
 
 #define SCREEN_NUM 0
 #define SLEEP_TIME 250
+#define FILTER_NORMAL_WINDOWS true
 
 #define LOCK_FILE "focus_last.lock"
 #define STATE_FILE "focus_last.state"
@@ -55,6 +56,25 @@ xcb_ewmh_connection_t get_ewmh_connection() {
 void cleanup_connection(xcb_ewmh_connection_t *ewmh) {
     xcb_ewmh_connection_wipe(ewmh);
     xcb_disconnect(ewmh->connection);
+}
+
+bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
+    if (!FILTER_NORMAL_WINDOWS)
+        return true; // just pretend all windows are normal
+
+    bool is_normal = false;
+    xcb_ewmh_get_atoms_reply_t window_type;
+    if (xcb_ewmh_get_wm_window_type_reply(ewmh, xcb_ewmh_get_wm_window_type(ewmh, window),
+                                          &window_type, NULL)) {
+        for (unsigned int i = 0; i < window_type.atoms_len; i++) {
+            if (window_type.atoms[i] == ewmh->_NET_WM_WINDOW_TYPE_NORMAL) {
+                is_normal = true;
+                break;
+            }
+        }
+        xcb_ewmh_get_atoms_reply_wipe(&window_type);
+    }
+    return is_normal;
 }
 
 uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
@@ -104,7 +124,7 @@ void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
 void write_state_file();
 void on_active_window_changed(xcb_ewmh_connection_t *ewmh) {
     xcb_window_t window = get_active_window(ewmh);
-    if (window > 0) {
+    if (window > 0 && is_normal_window(ewmh, window)) {
         uint32_t desktop = get_current_desktop(ewmh);
         if (seen_windows[0].window == 0) {
             seen_windows[0].desktop = desktop;
@@ -204,7 +224,7 @@ void read_state_file() {
     }
 
     seen_window_t seen_window = {0};
-    for (int i = 0; i < 2; i++) {
+    for (unsigned int i = 0; i < 2; i++) {
         if (fread(&seen_window, sizeof(seen_window_t), 1, fp) != 1) {
             fprintf(stderr, "Parsing state file %s failed\n", state_path);
             break;
@@ -227,7 +247,7 @@ void write_state_file() {
 
     // we don't care if writing fails, we only read complete records of the
     // right size above
-    for (int i = 0; i < 2; i++)
+    for (unsigned int i = 0; i < 2; i++)
         fwrite(&seen_windows[i], sizeof(seen_window_t), 1, fp);
 
     fflush(fp);
