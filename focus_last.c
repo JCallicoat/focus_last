@@ -26,6 +26,8 @@
 #define LOCK_FILE "focus_last.lock"
 #define STATE_FILE "focus_last.state"
 
+const uint32_t STATE_VERSION = 0;
+
 static char *lock_path;
 static char *state_path;
 
@@ -186,6 +188,14 @@ void read_state_file() {
         return;  // don't care if we don't have a state file yet
     }
 
+    int state_version;
+    if (fread(&state_version, sizeof(int), 1, fp) != 1 || state_version != STATE_VERSION) {
+        puts("State file version mismatch, removing existing state file");
+        fclose(fp);
+        unlink(state_path);
+        return;
+    }
+
     xcb_window_t seen_window = XCB_NONE;
     for (unsigned int i = 0; i < 2; i++) {
         if (fread(&seen_window, sizeof(xcb_window_t), 1, fp) != 1) {
@@ -208,8 +218,7 @@ void write_state_file() {
         return;
     }
 
-    // we don't care if writing fails, we only read complete records of the
-    // right size above
+    fwrite(&STATE_VERSION, sizeof(STATE_VERSION), 1, fp);
     for (unsigned int i = 0; i < 2; i++)
         fwrite(&seen_windows[i], sizeof(xcb_window_t), 1, fp);
 
