@@ -139,7 +139,7 @@ void set_paths() {
     size_t dirlen = strlen(dir);
     lock_path = malloc(dirlen + sizeof("/" LOCK_FILE));
     if (lock_path == NULL) {
-        fputs("Couldn't allocate memory.", stderr);
+        fputs("Could not allocate memory", stderr);
         exit(1);
     }
     memcpy(lock_path, dir, dirlen);
@@ -147,7 +147,7 @@ void set_paths() {
 
     state_path = malloc(dirlen + sizeof("/" STATE_FILE));
     if (state_path == NULL) {
-        fputs("Couldn't allocate memory.", stderr);
+        fputs("Could not allocate memory", stderr);
         exit(1);
     }
     memcpy(state_path, dir, dirlen);
@@ -169,7 +169,7 @@ int check_or_acquire_instance_lock() {
 
     int fd = open(lock_path, O_RDWR | O_CREAT, 0600);
     if (fd < 0) {
-        fprintf(stderr, "Couldn't create lock file: %s\n", lock_path);
+        fprintf(stderr, "Could not create lock file: %s\n", lock_path);
         exit(1);
     }
 
@@ -212,8 +212,8 @@ void write_state_file() {
 
     if (fp == NULL) {
         fprintf(stderr,
-                "Could open state file for writing %s "
-                "- the state file is necessary for this program to work.\n",
+                "Could not open state file for writing %s "
+                "- the state file is necessary for this program to work\n",
                 state_path);
         return;
     }
@@ -269,7 +269,6 @@ int main() {
     atexit(unlink_lock_file);
 
     receive_events(&ewmh);
-
     cleanup_connection(&ewmh);
 
     return 0;
