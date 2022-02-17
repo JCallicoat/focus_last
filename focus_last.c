@@ -79,15 +79,15 @@ bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
 
 uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
     uint32_t current_desktop;
-    xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, 0),
-                                       &current_desktop, 0);
+    xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, SCREEN_NUM),
+                                       &current_desktop, NULL);
     return current_desktop;
 }
 
 xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
     xcb_window_t active_window;
-    xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, 0),
-                                     &active_window, 0);
+    xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, SCREEN_NUM),
+                                     &active_window, NULL);
     return active_window;
 }
 
