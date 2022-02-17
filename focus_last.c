@@ -256,13 +256,11 @@ int main() {
 
     xcb_ewmh_connection_t ewmh = get_ewmh_connection();
 
-    /* print_info(&ewmh); */
     if (is_running) {
         activate_last_seen_window(&ewmh);
         // we need to let the wm have time to process the events
         // before closing our connection
         usleep(SLEEP_TIME);
-        /* print_info(&ewmh); */
         cleanup_connection(&ewmh);
         free_paths();
         exit(0);
