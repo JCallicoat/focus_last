@@ -3,9 +3,9 @@ Focus Last Window
 
 A window manager agnostic program to switch between the last focused windows using libxcb
 
-The program works by creating a lock file in `$XDG_RUNTIME_DIR/focus_last.lock` (or `/tmp` if that fails), then listening to X11 events on the root window for changes to the `_NET_ACTIVE_WINDOW` property.
+The program works by creating a lock file named `focus_last.lock` in `$XDG_RUNTIME_DIR` (or `/tmp` if that fails), then listening to X11 events on the root window for changes to the `_NET_ACTIVE_WINDOW` property.
 
-The last two active windows along with their desktops are saved in binary format in `focus_last.state` ().
+The last two active windows along with their desktops are saved in binary format named `focus_last.state` in `$XDG_RUNTIME_DIR` (or `/tmp` if that fails).
 
 When the program is run again and detects a lock on the lock file, it reads the state file and switches to the last active window (changing desktops if necessary).
 
