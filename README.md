@@ -5,19 +5,21 @@ A window manager agnostic program to switch between the last focused windows usi
 
 The program works by creating a lock file named `focus_last.lock` in `$XDG_RUNTIME_DIR` (or `/tmp` if that fails), then listening to X11 events on the root window for changes to the `_NET_ACTIVE_WINDOW` property.
 
-The last two active windows along with their desktops are saved in binary format named `focus_last.state` in `$XDG_RUNTIME_DIR` (or `/tmp` if that fails).
+The last two active windows are saved in binary format in a file named `focus_last.state` in `$XDG_RUNTIME_DIR` (or `/tmp` if that fails).
 
 When the program is run again and detects a lock on the lock file, it reads the state file and switches to the last active window (changing desktops if necessary).
 
 So the basic usage is:
 
 ```
-focus_last & # obtain lock and start listening for window changes
+# obtain lock and start listening for window changes in a background process
+focus_last &
 
-focus_last # called from a keybinding in your wm for example to switch to last window
+# now call it from a keybinding in your wm for example to switch to last window
+focus_last
 ```
 
-The only configuration options are the X11 screen number to use (default 0), the time to sleep after sending a request to change the active desktop/window (default 250 ms), and whether to only remember normal windows (`_NET_WM_WINDOW_TYPE_NORMAL`).
+The only configuration options are the X11 screen number to use (default 0), the time to sleep after sending a request to change the active desktop/window (default 250 ms), and whether to only remember normal windows (`_NET_WM_WINDOW_TYPE_NORMAL` default true).
 
 These are currently hard coded at the top of `focus_last.c` put I plan to add cli flags for them in the future.
 
@@ -38,11 +40,11 @@ The binary will be named `focus_last`. You can also install it to `~/bin` with `
 Static binary
 ----
 
-The `static_binary` branch tries to build a static binary using `zig cc` and linking with musl.
+The `make static` target tries to build a static binary using `python -m ziglang cc` and linking with musl.
 
-This assumes you have compiled the source for libX11, libxau, libxdmcp, libxcb and libxcb-wm in their respective directories in `~/build'.
+This assumes you have compiled the source for libX11, libxau, libxdmcp, libxcb and libxcb-wm in their respective directories in `~/build`.
 
-The 'focus_last` static binary file is included in the repo.
+The `focus_last` static binary file is included in the repo and should run on an x86_64 linux system.
 
 The lastest is built with:
 
