@@ -26,36 +26,50 @@
 #define LOCK_FILE "focus_last.lock"
 #define STATE_FILE "focus_last.state"
 
+const uint32_t STATE_VERSION = 0;
+
 static char *lock_path;
 static char *state_path;
 
-typedef struct {
-    uint32_t desktop;
-    xcb_window_t window;
-} seen_window_t;
+xcb_window_t seen_windows[2] = {0};
 
-seen_window_t seen_windows[2] = {0};
-
-xcb_ewmh_connection_t get_ewmh_connection() {
-    xcb_connection_t *connection = xcb_connect(NULL, NULL);
-    int err = xcb_connection_has_error(connection);
-    if (err) {
-        fprintf(stderr, "Error connecting to X11 (error code %d)\n", err);
-        exit(1);
-    }
-
-    xcb_ewmh_connection_t ewmh;
-    if (!xcb_ewmh_init_atoms_replies(&ewmh, xcb_ewmh_init_atoms(connection, &ewmh), NULL)) {
-        fputs("EWMH init failed\n", stderr);
-        exit(1);
-    }
-
-    return ewmh;
+uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
+    uint32_t current_desktop = XCB_NONE;
+    xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, SCREEN_NUM),
+                                       &current_desktop, NULL);
+    return current_desktop;
 }
 
-void cleanup_connection(xcb_ewmh_connection_t *ewmh) {
-    xcb_ewmh_connection_wipe(ewmh);
-    xcb_disconnect(ewmh->connection);
+xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
+    xcb_window_t active_window = XCB_NONE;
+    xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, SCREEN_NUM),
+                                     &active_window, NULL);
+    return active_window;
+}
+
+void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop) {
+    xcb_ewmh_request_change_current_desktop(ewmh, SCREEN_NUM, desktop, XCB_CURRENT_TIME);
+}
+
+void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
+    xcb_ewmh_request_change_active_window(ewmh, SCREEN_NUM, window,
+                                          XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER, // pager
+                                          XCB_CURRENT_TIME, 0); // don't set current window
+}
+
+uint32_t get_desktop_for_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
+    uint32_t desktop = XCB_NONE;
+    xcb_ewmh_get_wm_desktop_reply(ewmh, xcb_ewmh_get_wm_desktop(ewmh, window), &desktop, NULL);
+    return desktop;
+}
+
+void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
+    uint32_t current_desktop = get_current_desktop(ewmh);
+    uint32_t window_desktop = get_desktop_for_window(ewmh, seen_windows[0]);
+    if (window_desktop != current_desktop)
+        set_current_desktop(ewmh, window_desktop);
+    set_active_window(ewmh, seen_windows[0]);
+    xcb_flush(ewmh->connection);
 }
 
 bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
@@ -77,64 +91,19 @@ bool is_normal_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window) {
     return is_normal;
 }
 
-uint32_t get_current_desktop(xcb_ewmh_connection_t *ewmh) {
-    uint32_t current_desktop = 0;
-    xcb_ewmh_get_current_desktop_reply(ewmh, xcb_ewmh_get_current_desktop(ewmh, SCREEN_NUM),
-                                       &current_desktop, NULL);
-    return current_desktop;
-}
-
-xcb_window_t get_active_window(xcb_ewmh_connection_t *ewmh) {
-    xcb_window_t active_window = 0;
-    xcb_ewmh_get_active_window_reply(ewmh, xcb_ewmh_get_active_window(ewmh, SCREEN_NUM),
-                                     &active_window, NULL);
-    return active_window;
-}
-
-void set_current_desktop(xcb_ewmh_connection_t *ewmh, uint32_t desktop, bool do_flush) {
-    xcb_ewmh_request_change_current_desktop(ewmh,
-                                            SCREEN_NUM,
-                                            desktop,
-                                            XCB_CURRENT_TIME);
-    if (do_flush)
-        xcb_flush(ewmh->connection);
-}
-
-void set_active_window(xcb_ewmh_connection_t *ewmh, xcb_window_t window, bool do_flush) {
-    xcb_ewmh_request_change_active_window(ewmh,
-										  SCREEN_NUM,
-                                          window,
-                                          XCB_EWMH_CLIENT_SOURCE_TYPE_OTHER, // pager
-                                          XCB_CURRENT_TIME,
-                                          0); // don't set current window
-    if (do_flush)
-        xcb_flush(ewmh->connection);
-}
-
-void activate_last_seen_window(xcb_ewmh_connection_t *ewmh) {
-    // don't flush until we send both events
-    set_current_desktop(ewmh, seen_windows[0].desktop, false);
-    set_active_window(ewmh, seen_windows[0].window, true);
-}
-
 void write_state_file();
 void on_active_window_changed(xcb_ewmh_connection_t *ewmh) {
     xcb_window_t window = get_active_window(ewmh);
     if (window > 0 && is_normal_window(ewmh, window)) {
-        uint32_t desktop = get_current_desktop(ewmh);
-        if (seen_windows[0].window == 0) {
-            seen_windows[0].desktop = desktop;
-            seen_windows[0].window = window;
-        } else if (seen_windows[1].window != window) {
-            if (seen_windows[1].window != 0) {
-                seen_windows[0].desktop = seen_windows[1].desktop;
-                seen_windows[0].window = seen_windows[1].window;
-            }
-            seen_windows[1].desktop = desktop;
-            seen_windows[1].window = window;
+        if (seen_windows[0] == 0)
+            seen_windows[0] = window;
+        else if (seen_windows[1] != window) {
+            if (seen_windows[1] != 0)
+                seen_windows[0] = seen_windows[1];
+            seen_windows[1] = window;
         }
-        printf("[0] Desktop %d, Window %d\n", seen_windows[0].desktop, seen_windows[0].window);
-        printf("[1] Desktop %d, Window %d\n", seen_windows[1].desktop, seen_windows[1].window);
+        printf("[0] Window %d\n", seen_windows[0]);
+        printf("[1] Window %d\n", seen_windows[1]);
         write_state_file();
     }
 }
@@ -219,9 +188,17 @@ void read_state_file() {
         return;  // don't care if we don't have a state file yet
     }
 
-    seen_window_t seen_window = {0};
+    int state_version;
+    if (fread(&state_version, sizeof(int), 1, fp) != 1 || state_version != STATE_VERSION) {
+        puts("State file version mismatch, removing existing state file");
+        fclose(fp);
+        unlink(state_path);
+        return;
+    }
+
+    xcb_window_t seen_window = XCB_NONE;
     for (unsigned int i = 0; i < 2; i++) {
-        if (fread(&seen_window, sizeof(seen_window_t), 1, fp) != 1) {
+        if (fread(&seen_window, sizeof(xcb_window_t), 1, fp) != 1) {
             fprintf(stderr, "Parsing state file %s failed\n", state_path);
             break;
         }
@@ -241,13 +218,34 @@ void write_state_file() {
         return;
     }
 
-    // we don't care if writing fails, we only read complete records of the
-    // right size above
+    fwrite(&STATE_VERSION, sizeof(STATE_VERSION), 1, fp);
     for (unsigned int i = 0; i < 2; i++)
-        fwrite(&seen_windows[i], sizeof(seen_window_t), 1, fp);
+        fwrite(&seen_windows[i], sizeof(xcb_window_t), 1, fp);
 
     fflush(fp);
     fclose(fp);
+}
+
+xcb_ewmh_connection_t get_ewmh_connection() {
+    xcb_connection_t *connection = xcb_connect(NULL, NULL);
+    int err = xcb_connection_has_error(connection);
+    if (err) {
+        fprintf(stderr, "Error connecting to X11 (error code %d)\n", err);
+        exit(1);
+    }
+
+    xcb_ewmh_connection_t ewmh;
+    if (!xcb_ewmh_init_atoms_replies(&ewmh, xcb_ewmh_init_atoms(connection, &ewmh), NULL)) {
+        fputs("EWMH init failed\n", stderr);
+        exit(1);
+    }
+
+    return ewmh;
+}
+
+void cleanup_connection(xcb_ewmh_connection_t *ewmh) {
+    xcb_ewmh_connection_wipe(ewmh);
+    xcb_disconnect(ewmh->connection);
 }
 
 int main() {
