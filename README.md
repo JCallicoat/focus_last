@@ -21,7 +21,7 @@ focus_last
 
 The only configuration options are the X11 screen number to use (default 0), the time to sleep after sending a request to change the active desktop/window (default 250 ms), and whether to only remember normal windows (`_NET_WM_WINDOW_TYPE_NORMAL` default true).
 
-These are currently hard coded at the top of `focus_last.c` put I plan to add cli flags for them in the future.
+These can be configured using compiler flags (e.g., `-DFILTER_NORMAL_WINDOWS=false`) for the time being. I may add a config file in the future.
 
 Building from source
 ----
