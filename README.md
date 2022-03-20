@@ -40,18 +40,7 @@ The binary will be named `focus_last`. You can also install it to `~/bin` with `
 Static binary
 ----
 
-The `make static` target tries to build a static binary using `python -m ziglang cc` and linking with musl.
+The `make static` builds a static binary using docker to download and build in a container using an alpine 3.15 base and output the static binary to this directory.
 
-This assumes you have compiled the source for libX11, libxau, libxdmcp, libxcb and libxcb-wm in their respective directories in `~/build`.
+The `focus_last` static binary file from this is included in the repo for people who cannot build their own and should run on an x86_64 linux system.
 
-The `focus_last` static binary file is included in the repo and should run on an x86_64 linux system.
-
-The lastest is built with:
-
-- libX11 master (623b77d4)
-- libxau (tags/libXau-1.0.9)
-- libxdmcp (tags/libXdmcp-1.1.3)
-- libxcb (tags/libxcb-1.14)
-- libxcb-wm (tags/0.4.1)
-
-TODO: Add more details about compiling statically.
