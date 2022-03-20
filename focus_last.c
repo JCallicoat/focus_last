@@ -19,12 +19,25 @@
 #include <xcb/xcb_ewmh.h>
 #include <xcb/xproto.h>
 
+#ifndef SCREEN_NUM
 #define SCREEN_NUM 0
-#define SLEEP_TIME 250
-#define FILTER_NORMAL_WINDOWS true
+#endif
 
+#ifndef SLEEP_TIME
+#define SLEEP_TIME 250
+#endif
+
+#ifndef FILTER_NORMAL_WINDOWS
+#define FILTER_NORMAL_WINDOWS true
+#endif
+
+#ifndef LOCK_FILE
 #define LOCK_FILE "focus_last.lock"
+#endif
+
+#ifndef STATE_FILE
 #define STATE_FILE "focus_last.state"
+#endif
 
 const uint32_t STATE_VERSION = 0;
 
